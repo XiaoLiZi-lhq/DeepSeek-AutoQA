@@ -1,0 +1,26 @@
+deepseek:
+  url: "https://chat.deepseek.com"
+  auth_file: "auth.json"
+
+timeout:
+  answer_complete: 120
+  page_load: 30
+  element_wait: 10
+
+retry:
+  network_retries: 3
+  element_retries: 3
+  retry_interval: 5
+
+screenshot:
+  format: "png"
+  min_resolution: [1920, 1080]
+
+paths:
+  excel_file: "data/questions.xlsx"
+  output_dir: "output"
+  log_dir: "logs"
+
+schedule:
+  enabled: true
+  daily_time: "09:00"

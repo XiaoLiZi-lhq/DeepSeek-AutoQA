@@ -1,0 +1,22 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+
+# 虚拟环境
+venv/
+.venv/
+
+# IDE
+.vscode/
+.idea/
+
+# 项目特定
+auth.json
+output/
+logs/
+*.log
+
+# 系统
+.DS_Store
+Thumbs.db
