@@ -1,6 +1,6 @@
 """
 DeepSeek AutoQA - 自动问答截图工具
-主程序入口，串联 P1-P4 所有模块。
+主程序入口，串联 P1-P5 所有模块。
 """
 
 import asyncio
@@ -15,6 +15,7 @@ import yaml
 PROJECT_ROOT = Path(__file__).resolve().parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
+from core.archiver import Archiver
 from core.browser import BrowserManager
 from core.deepseek_client import DeepSeekClient
 from core.excel_reader import ExcelReader
@@ -47,12 +48,14 @@ async def process_question(
     处理单个问题：打开新对话 → 发送 → 等待 → 截图。
 
     Returns:
-        {"seq": int, "brand": str, "question": str, "success": bool, "screenshot": str, "error": str}
+        {"seq": int, "brand": str, "question": str, "answer_text": str,
+         "success": bool, "screenshot": str, "error": str}
     """
     result = {
         "seq": seq,
         "brand": brand_name,
         "question": question,
+        "answer_text": "",
         "success": False,
         "screenshot": "",
         "error": "",
@@ -67,6 +70,8 @@ async def process_question(
             return result
 
         answer_result = await client.wait_for_answer()
+        result["answer_text"] = answer_result.get("answer_text", "")
+
         if answer_result["timeout"]:
             print(f"{_ts()} [警告] 回答超时，尝试提取已有内容")
 
@@ -116,6 +121,8 @@ async def main():
 
     print(f"{_ts()} 共加载 {len(questions)} 个问题")
 
+    archiver = Archiver(config)
+
     browser = BrowserManager(config)
     await browser.start()
 
@@ -149,6 +156,26 @@ async def main():
             if result["screenshot"]:
                 print(f"       截图: {result['screenshot']}")
 
+            # P5: 归档截图 + 追加 Q&A 缓存
+            if result["success"] and result["screenshot"]:
+                timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+                txn_timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                archived = archiver.archive_screenshot(
+                    src_path=result["screenshot"],
+                    brand_name=result["brand"],
+                    seq=result["seq"],
+                    timestamp=timestamp,
+                )
+                print(f"       归档: {archived}")
+
+                archiver.append_qa(
+                    seq=result["seq"],
+                    brand_name=result["brand"],
+                    timestamp=txn_timestamp,
+                    question=result["question"],
+                    answer=result["answer_text"],
+                )
+
             if idx < total:
                 await asyncio.sleep(5)
 
@@ -157,6 +184,10 @@ async def main():
 
     success_count = sum(1 for r in results if r["success"])
     fail_count = len(results) - success_count
+
+    # P5: 写入 TXT 汇总
+    summary_path = archiver.write_summary()
+    print(f"\n{_ts()} Q&A 汇总已写入: {summary_path}")
 
     print("\n" + "=" * 60)
     print(f"{_ts()} 运行摘要")
