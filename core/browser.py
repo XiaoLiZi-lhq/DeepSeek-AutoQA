@@ -90,11 +90,12 @@ class BrowserManager:
 
     async def check_login(self) -> bool:
         """
-        访问 chat.deepseek.com 检测是否已登录。
+        检测当前页面是否已登录 DeepSeek。
 
-        检测逻辑：页面加载后检查是否存在聊天输入框，
-        如果存在则认为已登录；如果 URL 包含登录路径或页面上存在"登录"按钮，
-        则认为未登录。
+        检测逻辑：
+        1. 先检查当前页面 URL——如果已在 chat 页面且不是登录页，直接检测 DOM
+        2. 仅当当前页面不在目标 URL 时才执行导航（避免重复刷新）
+        3. DOM 检测：聊天输入框存在 → 已登录；登录按钮存在 → 未登录
 
         Returns:
             True 表示已登录，False 表示未登录。
@@ -102,13 +103,18 @@ class BrowserManager:
         if self._page is None:
             raise RuntimeError("浏览器尚未启动，请先调用 start()")
 
-        print(f"{_ts()} 正在访问 {self.deepseek_url} 检测登录状态...")
-        await self._page.goto(self.deepseek_url, wait_until="domcontentloaded")
-        await asyncio.sleep(3)
+        current_url = self._page.url
+
+        # 只在当前页面不是 DeepSeek 页面时才导航（避免重复刷新）
+        if self.deepseek_url not in current_url:
+            print(f"{_ts()} 正在导航至 {self.deepseek_url} ...")
+            await self._page.goto(self.deepseek_url, wait_until="domcontentloaded")
+        else:
+            # 已在目标域名下，静默检测
+            pass
 
         current_url = self._page.url
         if "sign_in" in current_url or "/login" in current_url:
-            print(f"{_ts()} 页面跳转至登录页：{current_url}")
             return False
 
         # 检查聊天输入框（已登录标志）
@@ -119,7 +125,6 @@ class BrowserManager:
             'div[contenteditable="true"]'
         )
         if chat_input:
-            print(f"{_ts()} 检测到聊天输入框，已登录")
             return True
 
         # 检查是否有"登录"按钮
@@ -130,7 +135,6 @@ class BrowserManager:
             'button:has-text("Log in")'
         )
         if login_btn:
-            print(f"{_ts()} 页面存在登录按钮，未登录")
             return False
 
         # 兜底：检查聊天列表等已登录特征元素
@@ -140,10 +144,8 @@ class BrowserManager:
             '[class*="sidebar"]'
         )
         if chat_list:
-            print(f"{_ts()} 检测到对话列表，已登录")
             return True
 
-        print(f"{_ts()} 无法确定登录状态，按未登录处理")
         return False
 
     async def ensure_login(self) -> None:
