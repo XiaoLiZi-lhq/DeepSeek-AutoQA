@@ -1,26 +1,29 @@
----
-AIGC:
-    Label: "1"
-    ContentProducer: 001191440300708461136T1XGW3
-    ProduceID: 30e1e88fe1c403b293295ffa5540d602_f812320d716b11f1897e5254002afed2
-    ReservedCode1: l4gtfe3PaDCu/DR9vjI67jhH0bTs6FRfEKuQhx7G5eLvOX8TOqxsRRB5ysB9tVkLFt4gAEid0qFvqA71ye2giqtfYEJlavArTv5QuiP3bVcfR3nHbj4jgvTabNYWJJgIkx7dJEdzpm0/d4oT1ei488J1f68rIaHpRzNkOJLK2G3rp4nB7s4keHRZBq4=
-    ContentPropagator: 001191440300708461136T1XGW3
-    PropagateID: 30e1e88fe1c403b293295ffa5540d602_f812320d716b11f1897e5254002afed2
-    ReservedCode2: l4gtfe3PaDCu/DR9vjI67jhH0bTs6FRfEKuQhx7G5eLvOX8TOqxsRRB5ysB9tVkLFt4gAEid0qFvqA71ye2giqtfYEJlavArTv5QuiP3bVcfR3nHbj4jgvTabNYWJJgIkx7dJEdzpm0/d4oT1ei488J1f68rIaHpRzNkOJLK2G3rp4nB7s4keHRZBq4=
----
-
 # DeepSeek AutoQA
 
-基于 Python + Playwright 的 DeepSeek 自动问答截图工具。
+基于 Python + Playwright 的大模型自动问答采集原型工具：读取 Excel 问题集，自动向 DeepSeek 网页版逐条提问，完整留存回答截图与引用信息。
 
 ## 功能
 
-- 读取 Excel 问题集逐条向 chat.deepseek.com 提问
-- 自动截图保存回答内容
-- 支持定时任务与重试机制
+- 读取 Excel 问题集，逐条向 chat.deepseek.com 提问
+- 自动截图保存完整回答内容（不截断、不遗漏）
+- 引用来源提取（含折叠面板展开处理）
+- 会话管理：每题独立会话，避免上下文污染
+- 失败重试与限速控制，降低平台风控触发
 
 ## 环境要求
 
 - Python >= 3.8
 - Playwright + Chromium
-*（内容由AI生成，仅供参考）*
+- openpyxl（读取问题集）
+
+## 使用
+
+```bash
+pip install playwright openpyxl
+playwright install chromium
+python autoqa.py --excel questions.xlsx --out ./output
+```
+
+## 说明
+
+本仓库为个人学习原型，核心架构（provider 工厂、限流器、会话管理、截图留存）后续迭代进了生产级多平台采集引擎，覆盖 DeepSeek / 豆包 / 元宝 / Kimi / 通义千问 / 智谱六平台。
